@@ -17,7 +17,7 @@ This project implements `tipc` which compiles TIP programs into LLVM bitcode.  L
 
 ## Dependencies
 
-`tipc` is implemented in C++17 and depends on a number of tools and packages, e.g., [ANTLR4](https://www.antlr.org), [Catch2](https://github.com/catchorg/Catch2), [CMake](https://cmake.org/), [Doxygen](https://www.doxygen.nl/), [loguru](https://github.com/emilk/loguru), [Java](https://www.java.com), [LLVM](https://www.llvm.org).  To simplify dependency management the project provides a [bootstrap](bin/bootstrap.sh) script to install all of the required dependencies on linux ubuntu and mac platforms.
+`tipc` is implemented in C++17 and depends on a number of tools and packages, e.g., [ANTLR4](https://www.antlr.org), [Catch2](https://github.com/catchorg/Catch2), [CMake](https://cmake.org/), [Doxygen](https://www.doxygen.nl/), [loguru](https://github.com/emilk/loguru), [Java](https://www.java.com), [LLVM](https://www.llvm.org).  To simplify dependency management the project provides a [bootstrap](bin/bootstrap.sh) script to install all of the required dependencies on linux ubuntu and mac platforms; if you are using `portal.cs.virginia.edu` to build then you can replace this script with running `module load <pathto>/tipc/conf/modulefiles/tipc/F24`, where `<pathto>` is the path to where you have installed `tipc`.
 
 ## Building tipc
 
@@ -156,7 +156,7 @@ From the `File` menu select `New` and then `Project from Version Control`.  You 
 
 From the `CLion` menu select `Build, Execution, Deployment` and then `CMake`.  You want to change the `Build directory` to `build` and then define an `Environment` variable.   When you ran the `bootstrap.sh` script it defined a shell variable `LLVM_DIR` in your `.bashrc`.  Copy that definition into the `Environment` field under `Cache variables`.  Your `Settings` should look as follows:
 
-![CLion CMake Settings](docs/assets/clion/clion-settings-for-tipc.png)
+![CLion CMake Settings](docs/assets/clion/clion_settings_for_tipc.png)
 
 Now you can click `Apply` and then `OK` to complete the setup.
 
@@ -236,12 +236,12 @@ Other than issues related to the efficiency of the code that it generates, the `
 
 By default `tipc` implements the unification-based monomorphic type inference algorithm used in the [Scala implementation](https://github.com/cs-au-dk/TIP/).  `tipc` also support a form of polymorphic type inference using the `--pi` option.  To use polymorphic type inference programmers can add the `poly` keyword to a function declaration, but `tipc` will only perform polymorphic type inference for such functions if they are non-recursive.
 
-There is also a difference in type inference related to records.  The type system that ensures that any expression appearing in the record position of a field access expression is in fact a record, but it does not infer precise record typing.  Instead the strategy used is to define an *uber* record that consists of all of the fields referenced across the program. Code generation for records will allocate an uber record and then explicitly initialize fields present in a record expression. If the record is being created via an `alloc` expresion, the fields that aren't explictly set will be set to a default value 0, as we allocate memory using the C function `calloc`. If the record is being created without explictly allocating memory for it, the fields that aren't explictly set will not be given any value, but may still be referenced. This can lead to some unexpected behavior.  Consider this TIP program:
+There is also a difference in type inference related to records.  The type system that ensures that any expression appearing in the record position of a field access expression is in fact a record, but it does not infer precise record typing.  Instead the strategy used is to define an *uber* record that consists of all of the fields referenced across the program. Code generation for records will allocate a global record and then explicitly initialize fields present in a record expression. If the record is being created via an `alloc` expresion, the fields that aren't explictly set will be set to a default value 0, as we allocate memory using the C function `calloc`. If the record is being created without explictly allocating memory for it, the fields that aren't explictly set will not be given any value, but may still be referenced. This can lead to some unexpected behavior.  Consider this TIP program:
 ```
 main() { var r; r = {g:1}; return access(r); }
 access(r) { return r.f; }
 ```
-The record expression, `{g:1}`, forces the uber record to contain a field `g`, and the access expression `r.f`, forces the presence of field `f`. Because `r` is not being allocated using an `alloc` expression, access will return whatever value was in memory at the location of `r.f`. 
+The record expression, `{g:1}`, forces the global record to contain a field `g`, and the access expression `r.f`, forces the presence of field `f`. Because `r` is not being allocated using an `alloc` expression, access will return whatever value was in memory at the location of `r.f`. 
 One might prefer that this program yield a type error, but that would require a more sophisticated type system.  We chose not to implement that to manage the complexity of what is primarily a pedagogical project. If instead, r is allocated using `alloc` like the following:
 ```
 main() { var r; r = alloc {g:1}; return access(r); }
@@ -349,7 +349,9 @@ There is lots of great advice about using LLVM available:
   * the [LLVM Programmer's Manual](http://llvm.org/docs/ProgrammersManual.html) is a key resource
   * someone once told me to just use a search engine to find the LLVM APIs and its a standard use case for me, e.g., I don't remember where the docs are I just search for `llvm irbuilder`
   * LLVM has some nuances that take a bit to understand.  For instance, the [GEP](https://llvm.org/docs/GetElementPtr.html) instruction, which `tipc` uses quite a bit given that it emits calls through a function table.
-  
+  * LLVM15+ have implemented the concept of "Opaque Pointers", this removes all the typed pointer implementations and associated functions.
+    * [LLVM Docs on OpaquePointers](https://llvm.org/docs/OpaquePointers.html) talks about this in reasonable detail.
+    * [Here](docs/OpaquePointers.md) is a Quick summary of the change and how that affects tipc.
 ### Git Resources
 + [Pro Git Book](https://git-scm.com/book/en/v2)
 + [Git For Ages 4 And Up](https://www.youtube.com/watch?v=1ffBJ4sVUb4)
