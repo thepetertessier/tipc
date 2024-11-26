@@ -74,7 +74,7 @@ void Optimizer::optimize(llvm::Module *theModule,
 
   if (contains(licm, enabledOpts)) {
     // Add loop invariant code motion 
-    loopPassManagerWithMSSA.addPass(llvm::LICMPass()); 
+    loopPassManagerWithMSSA.addPass(llvm::LICMPass(llvm::LICMOptions())); 
   }
 
   if (contains(del, enabledOpts)) {
